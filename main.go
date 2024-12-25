@@ -67,22 +67,17 @@ var surveyTools = []openai.ChatCompletionToolParam{
 func main() {
   ctx := context.Background()
   client := openai.NewClient()
-  com, err := client.Chat.Completions.New(
-    ctx,
-    openai.ChatCompletionNewParams{
-      Model: openai.F("gpt-4o-mini"),
-      N: openai.F[int64](1),
-      Messages: openai.F([]openai.ChatCompletionMessageParamUnion{
-        openai.SystemMessage(
-          `Your job is to survey the user about their use of the application they just used, "Smart SaaS".`+
-          ` Utilize the provided tools to ask questions and get structured responses.`+
-          ` If you're asking a question that requires a specific type of response, use the appropriate tool.`+
-          ` For example, if you're asking a yes/no question, use the "confirm" tool or if it can be a multiple choice, use "select".`,
-        ),
-      }),
-      Tools: openai.F(surveyTools),
-    },
-  )
+  history := []openai.ChatCompletionMessageParamUnion{
+      openai.SystemMessage(
+        `Your job is to survey the user about their use of the application they just used, "Smart SaaS".`+
+        ` Utilize the provided tools to ask questions and get structured responses.`+
+        ` Only use the tools to communicate with the user.`+
+        ` If you're asking a question that requires a specific type of response, use the appropriate tool.`+
+        ` For example, if you're asking a yes/no question, use the "confirm" tool or if it can be a multiple choice, use "select".`,
+      ),
+  }
+
+  com, err := prompt(ctx, client, history)
   if err != nil {
     panic(err)
   }
@@ -94,4 +89,47 @@ func main() {
   fmt.Printf("Response:\n%s\n", string(b))
 }
 
+func prompt(ctx context.Context, client *openai.Client, hist []openai.ChatCompletionMessageParamUnion) (*openai.ChatCompletion, error) {
+  return client.Chat.Completions.New(
+    ctx,
+    openai.ChatCompletionNewParams{
+      Model: openai.F("gpt-4o-mini"),
+      N: openai.F[int64](1),
+      Messages: openai.F(hist),
+      Tools: openai.F(surveyTools),
+    },
+  )
+}
+
+type askprompt struct {
+  Prompt string `json:"prompt"`
+}
+
+type confirmprompt struct {
+  Prompt string `json:"prompt"`
+}
+
+type selectprompt struct {
+  Prompt string `json:"prompt"`
+  Options []string `json:"options"`
+}
+
+func (sp selectprompt) ask() (string, error) {
+
+}
+
+func parseToolCall(tc openai.ChatCompletionToolCall) 
+
+func handleResponse(com *openai.ChatCompletion) {
+  ch := com.Choices[0]
+  if len(ch.Message.Content) > 0 {
+    fmt.Println("> " + ch.Message.Content)
+  }
+  for _, tc := range ch.Message.ToolCalls {
+    fn := tc.Function
+  }
+  for _, msg := range com.Choices[0].Messages {
+    fmt.Println(msg.Content)
+  }
+}
 
